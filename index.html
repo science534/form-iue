@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ISA FINAL GOD MODE</title>
+<style>
+body{margin:0;overflow:hidden;background:black;}
+canvas{display:block;}
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://threejs.org/examples/js/loaders/FontLoader.js"></script>
+<script src="https://threejs.org/examples/js/geometries/TextGeometry.js"></script>
+
+<script>
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 15000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000);
+document.body.appendChild(renderer.domElement);
+
+/* LIGHT */
+const light = new THREE.PointLight(0x00ffff,6);
+light.position.set(0,300,400);
+scene.add(light);
+
+/* 10000 STARFIELD */
+const starGeo=new THREE.BufferGeometry();
+const starCount=10000;
+const pos=new Float32Array(starCount*3);
+for(let i=0;i<starCount*3;i++){
+    pos[i]=(Math.random()-0.5)*10000;
+}
+starGeo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:1}));
+scene.add(stars);
+
+/* BLACK HOLE */
+const hole=new THREE.Mesh(
+    new THREE.SphereGeometry(150,64,64),
+    new THREE.MeshBasicMaterial({color:0x000000})
+);
+scene.add(hole);
+
+/* ENERGY RING */
+const ring=new THREE.Mesh(
+    new THREE.TorusGeometry(250,40,32,300),
+    new THREE.MeshBasicMaterial({color:0x00ffff})
+);
+scene.add(ring);
+
+let textMeshes=[];
+let particles;
+let phase=0;
+let holdTime=0;
+
+const loader=new THREE.FontLoader();
+loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',function(font){
+
+    const mat=new THREE.MeshStandardMaterial({
+        color:0x00ffff,
+        emissive:0x0088ff,
+        metalness:0.8,
+        roughness:0.2
+    });
+
+    const lines=[
+        {t:"Welcome to",y:120},
+        {t:"ISA Community",y:0},
+        {t:"Indonesian Space Astronomy",y:-120}
+    ];
+
+    lines.forEach(l=>{
+        const geo=new THREE.TextGeometry(l.t,{
+            font:font,
+            size:35,
+            height:12
+        });
+        geo.center();
+        const mesh=new THREE.Mesh(geo,mat);
+        mesh.position.set(0,l.y,-4000);
+        scene.add(mesh);
+        textMeshes.push(mesh);
+    });
+
+    animate();
+});
+
+function explodeText(){
+    const geo=new THREE.BufferGeometry();
+    const count=8000;
+    const arr=new Float32Array(count*3);
+    for(let i=0;i<count*3;i++){
+        arr[i]=(Math.random()-0.5)*800;
+    }
+    geo.setAttribute("position",new THREE.BufferAttribute(arr,3));
+    particles=new THREE.Points(geo,new THREE.PointsMaterial({color:0x00ffff,size:3}));
+    scene.add(particles);
+
+    textMeshes.forEach(m=>scene.remove(m));
+}
+
+function flash(){
+    renderer.setClearColor(0xffffff);
+    setTimeout(()=>renderer.setClearColor(0x000000),250);
+}
+
+function animate(){
+requestAnimationFrame(animate);
+
+stars.rotation.z+=0.0005;
+ring.rotation.x+=0.01;
+ring.rotation.y+=0.015;
+
+/* PHASE 0 – TEXT DATANG */
+if(phase===0){
+    textMeshes.forEach(m=>{
+        if(m.position.z<0){
+            m.position.z+=15;
+        }
+    });
+
+    if(textMeshes[0] && textMeshes[0].position.z>=0){
+        phase=1;
+    }
+}
+
+/* PHASE 1 – HOLD LAMA + POWER UP */
+else if(phase===1){
+    holdTime++;
+
+    textMeshes.forEach(m=>{
+        m.rotation.y+=0.01;
+        m.rotation.x+=0.005;
+
+        const glow = 3 + Math.sin(holdTime*0.1)*2;
+        m.material.emissiveIntensity = glow;
+
+        // subtle shake
+        m.position.x = Math.sin(holdTime*0.05)*2;
+    });
+
+    camera.position.z-=0.5;
+
+    if(holdTime>900){ // ~15 detik
+        phase=2;
+    }
+}
+
+/* PHASE 2 – EXPLOSION */
+else if(phase===2){
+    explodeText();
+    flash();
+    phase=3;
+}
+
+/* PHASE 3 – PARTICLE SUCTION */
+else if(phase===3 && particles){
+    particles.rotation.y+=0.02;
+    particles.rotation.x+=0.01;
+
+    particles.scale.multiplyScalar(0.995);
+}
+
+renderer.render(scene,camera);
+}
+
+camera.position.z=-3000;
+
+window.addEventListener("resize",()=>{
+camera.aspect=window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+</script>
+</body>
+  </html>
